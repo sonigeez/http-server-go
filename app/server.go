@@ -14,9 +14,20 @@ func main() {
 		fmt.Println("Failed to bind to port 4221")
 		os.Exit(1)
 	}
-	_, err = l.Accept()
-	if err != nil {
-		fmt.Println("Error accepting connection: ", err.Error())
-		os.Exit(1)
+	defer l.Close()
+
+	for {
+		conn, err := l.Accept()
+		if err != nil {
+			fmt.Println("Error accepting connection: ", err.Error())
+			continue // Continue to the next iteration of the loop.
+		}
+
+		go func(c net.Conn) {
+			defer c.Close()
+			fmt.Printf("Serving %s\n", c.RemoteAddr().String())
+			response := "HTTP/1.1 200 OK\r\n\r\n"
+			c.Write([]byte(response))
+		}(conn)
 	}
 }
