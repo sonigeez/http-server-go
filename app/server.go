@@ -66,7 +66,9 @@ func handleRequest(conn net.Conn) {
 			} else {
 				defer file.Close()
 				fileContents := strings.Split(string(buf), "\r\n\r\n")[1]
-				_, err := file.Write(fileContents)
+				//convert string to byte array
+				fileContentByte := []byte(fileContents)
+				_, err := file.Write(fileContentByte)
 				if err != nil {
 					response = buildResponse(500, "text/plain", "Internal Server Error")
 				} else {
