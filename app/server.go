@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"net"
 	"os"
+	"strings"
 )
 
 func main() {
@@ -20,14 +21,38 @@ func main() {
 		conn, err := l.Accept()
 		if err != nil {
 			fmt.Println("Error accepting connection: ", err.Error())
-			continue // Continue to the next iteration of the loop.
+			continue
 		}
-
-		go func(c net.Conn) {
-			defer c.Close()
-			fmt.Printf("Serving %s\n", c.RemoteAddr().String())
-			response := "HTTP/1.1 200 OK\r\n\r\n"
-			c.Write([]byte(response))
-		}(conn)
+		go handleRequest(conn)
 	}
+}
+
+
+func handleRequest(conn net.Conn) {
+    defer conn.Close()
+
+    buf := make([]byte, 1024)
+    _, err := conn.Read(buf)
+    if err != nil {
+        fmt.Println("Error reading:", err.Error())
+        return
+    }
+
+    requestLine := strings.Split(string(buf), "\r\n")[0]
+    requestParts := strings.Split(requestLine, " ")
+    if len(requestParts) < 3 {
+        fmt.Println("Invalid request line")
+        return
+    }
+
+    method, path, _ := requestParts[0], requestParts[1], requestParts[2]
+    if method == "GET" && path == "/" {
+        response := "HTTP/1.1 200 OK\r\n\r\n"
+		fmt.Println("200")
+        conn.Write([]byte(response))
+    } else {
+		fmt.Println("404")
+        response := "HTTP/1.1 404 Not Found\r\n\r\n"
+        conn.Write([]byte(response))
+    }
 }
