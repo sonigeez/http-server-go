@@ -1,13 +1,21 @@
 package main
 
 import (
+	"flag"
 	"fmt"
 	"net"
 	"os"
 	"strings"
+	"path/filepath"
+	"io/ioutil"
 )
 
+var dirFlag = flag.String("directory", ".", "directory to serve files from")
+
+
+
 func main() {
+	flag.Parse()
 	fmt.Println("Logs from your program will appear here!")
 
 	l, err := net.Listen("tcp", "0.0.0.0:4221")
@@ -28,6 +36,7 @@ func main() {
 }
 
 func handleRequest(conn net.Conn) {
+
     defer conn.Close()
 
     buf := make([]byte, 1024)
@@ -48,7 +57,33 @@ func handleRequest(conn net.Conn) {
     case strings.HasPrefix(path, "/echo/"):
         message := strings.TrimPrefix(path, "/echo/")
         response = buildResponse(200, "text/plain", message)
-
+	case strings.HasPrefix(path, "/files/"):
+		filePath := filepath.Join(*dirFlag, strings.TrimPrefix(path, "/files/"))
+		// Use os.Stat to check if the file exists and is not a directory before attempting to open it.
+		fileInfo, err := os.Stat(filePath)
+		if err != nil {
+			if os.IsNotExist(err) {
+				response = buildResponse(404, "text/plain", "File not found")
+			} else {
+				response = buildResponse(500, "text/plain", "Internal Server Error")
+			}
+		} else if fileInfo.IsDir() {
+			response = buildResponse(400, "text/plain", "Bad Request")
+		} else {
+			file, err := os.Open(filePath)
+			if err != nil {
+				response = buildResponse(500, "text/plain", "Internal Server Error")
+			} else {
+				defer file.Close()
+			// If the file exists, read its contents with ioutil.ReadFile or by creating a buffer and using os.ReadFile.
+			fileContents, err := ioutil.ReadFile(filePath)
+			if err != nil {
+				response = buildResponse(500, "text/plain", "Internal Server Error")
+			} else {
+				response = buildResponse(200, "application/octet-stream", string(fileContents))
+			}
+		}
+	}
     case path == "/":
         response = buildResponse(200, "text/plain", "Welcome!")
 
