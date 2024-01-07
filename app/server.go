@@ -36,7 +36,7 @@ func handleRequest(conn net.Conn) {
         fmt.Println("Error reading:", err.Error())
         return
     }
-    buf = buf[:n] // Trim the buffer to actual read size
+    buf = buf[:n]
 
     requestLine := strings.Split(string(buf), "\r\n")[0]
     requestParts := strings.Split(requestLine, " ")
