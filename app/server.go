@@ -52,10 +52,10 @@ func handleRequest(conn net.Conn) {
     case path == "/":
         response = buildResponse(200, "text/plain", "Welcome!")
 
-    case strings.HasPrefix(path, "/user-agent"):
-        userAgent := strings.Split(string(buf), "\r\n")[2]
-        response = buildResponse(200, "text/plain", userAgent)
-
+	case strings.HasPrefix(path, "/user-agent"):
+	userAgent := strings.Split(string(buf), "\r\n")[2]
+	userAgent = strings.TrimPrefix(userAgent, "User-Agent: ")
+	response = buildResponse(200, "text/plain", userAgent)
     default:
         response = buildResponse(404, "text/plain", "Not Found")
     }
