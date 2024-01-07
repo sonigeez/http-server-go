@@ -38,31 +38,38 @@ func handleRequest(conn net.Conn) {
         return
     }
 
-    requestLine := strings.Split(string(buf), "\r\n")[0]
+    requestLines := strings.Split(string(buf), "\r\n")
+    requestLine := requestLines[0]
     requestParts := strings.Split(requestLine, " ")
-
     _, path, _ := requestParts[0], requestParts[1], requestParts[2]
-	isEcho := strings.HasPrefix(path, "/echo/")
-	isRoot := path == "/"
-	if isEcho {
-		message := strings.TrimPrefix(path, "/echo/")
-		response := fmt.Sprintf("HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\nContent-Length: %d\r\n\r\n%s", len(message), message)
-		_, writeErr := conn.Write([]byte(response))
-		if writeErr != nil {
-			fmt.Println("Error writing:", writeErr.Error())
-		}
-	} else if isRoot {
-		response := "HTTP/1.1 200 OK\r\n\r\n"
-		_, writeErr := conn.Write([]byte(response))
-		if writeErr != nil {
-			fmt.Println("Error writing:", writeErr.Error())
-		}
-	}else{
-		response := "HTTP/1.1 404 Not Found\r\n\r\n"
-		_, writeErr := conn.Write([]byte(response))
-		if writeErr != nil {
-			fmt.Println("Error writing:", writeErr.Error())
-		}
-	}
-}
 
+    if path == "/user-agent" {
+        userAgent := ""
+        for _, line := range requestLines {
+            if strings.HasPrefix(line, "User-Agent:") {
+                userAgent = strings.TrimSpace(strings.TrimPrefix(line, "User-Agent:"))
+                break
+            }
+        }
+
+        if userAgent != "" {
+            response := fmt.Sprintf("HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\nContent-Length: %d\r\n\r\n%s", len(userAgent), userAgent)
+            _, writeErr := conn.Write([]byte(response))
+            if writeErr != nil {
+                fmt.Println("Error writing:", writeErr.Error())
+            }
+        } else {
+            response := "HTTP/1.1 400 Bad Request\r\n\r\n"
+            _, writeErr := conn.Write([]byte(response))
+            if writeErr != nil {
+                fmt.Println("Error writing:", writeErr.Error())
+            }
+        }
+    } else {
+        response := "HTTP/1.1 404 Not Found\r\n\r\n"
+        _, writeErr := conn.Write([]byte(response))
+        if writeErr != nil {
+            fmt.Println("Error writing:", writeErr.Error())
+        }
+    }
+}
