@@ -59,15 +59,14 @@ func handleRequest(conn net.Conn) {
         response = buildResponse(200, "text/plain", message)
 	case strings.HasPrefix(path, "/files/"):
 		filePath := filepath.Join(*dirFlag, strings.TrimPrefix(path, "/files/"))
-		//check if method is GET
 		if requestParts[0] == "POST" {
-			// get file from body and save it to the directory
 			file, err := os.Create(filePath)
 			if err != nil {
 				response = buildResponse(500, "text/plain", "Internal Server Error")
 			} else {
 				defer file.Close()
-				_, err := file.Write(buf)
+				fileContents := strings.Split(string(buf), "\r\n\r\n")[1]
+				_, err := file.Write(fileContents)
 				if err != nil {
 					response = buildResponse(500, "text/plain", "Internal Server Error")
 				} else {
@@ -76,7 +75,6 @@ func handleRequest(conn net.Conn) {
 			}
 			break
 		}
-		// Use os.Stat to check if the file exists and is not a directory before attempting to open it.
 		fileInfo, err := os.Stat(filePath)
 		if err != nil {
 			if os.IsNotExist(err) {
@@ -92,7 +90,6 @@ func handleRequest(conn net.Conn) {
 				response = buildResponse(500, "text/plain", "Internal Server Error")
 			} else {
 				defer file.Close()
-			// If the file exists, read its contents with ioutil.ReadFile or by creating a buffer and using os.ReadFile.
 			fileContents, err := ioutil.ReadFile(filePath)
 			if err != nil {
 				response = buildResponse(500, "text/plain", "Internal Server Error")
