@@ -27,49 +27,50 @@ func main() {
 	}
 }
 
-
 func handleRequest(conn net.Conn) {
     defer conn.Close()
 
     buf := make([]byte, 1024)
-    _, err := conn.Read(buf)
+    n, err := conn.Read(buf)
     if err != nil {
         fmt.Println("Error reading:", err.Error())
         return
     }
+    buf = buf[:n] // Trim the buffer to actual read size
 
-    requestLines := strings.Split(string(buf), "\r\n")
-    requestLine := requestLines[0]
+    requestLine := strings.Split(string(buf), "\r\n")[0]
     requestParts := strings.Split(requestLine, " ")
+
     _, path, _ := requestParts[0], requestParts[1], requestParts[2]
 
-    if path == "/user-agent" {
-        userAgent := ""
-        for _, line := range requestLines {
-            if strings.HasPrefix(line, "User-Agent:") {
-                userAgent = strings.TrimSpace(strings.TrimPrefix(line, "User-Agent:"))
-                break
-            }
-        }
+    var response string
+    switch {
+    case strings.HasPrefix(path, "/echo/"):
+        message := strings.TrimPrefix(path, "/echo/")
+        response = buildResponse(200, "text/plain", message)
 
-        if userAgent != "" {
-            response := fmt.Sprintf("HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\nContent-Length: %d\r\n\r\n%s", len(userAgent), userAgent)
-            _, writeErr := conn.Write([]byte(response))
-            if writeErr != nil {
-                fmt.Println("Error writing:", writeErr.Error())
-            }
-        } else {
-            response := "HTTP/1.1 400 Bad Request\r\n\r\n"
-            _, writeErr := conn.Write([]byte(response))
-            if writeErr != nil {
-                fmt.Println("Error writing:", writeErr.Error())
-            }
-        }
-    } else {
-        response := "HTTP/1.1 404 Not Found\r\n\r\n"
-        _, writeErr := conn.Write([]byte(response))
-        if writeErr != nil {
-            fmt.Println("Error writing:", writeErr.Error())
-        }
+    case path == "/":
+        response = buildResponse(200, "text/plain", "Welcome!")
+
+    case strings.HasPrefix(path, "/user-agent"):
+        userAgent := strings.Split(string(buf), "\r\n")[2]
+        response = buildResponse(200, "text/plain", userAgent)
+
+    default:
+        response = buildResponse(404, "text/plain", "Not Found")
     }
+
+    _, writeErr := conn.Write([]byte(response))
+    if writeErr != nil {
+        fmt.Println("Error writing:", writeErr.Error())
+    }
+}
+
+func buildResponse(statusCode int, contentType string, body string) string {
+	return fmt.Sprintf("HTTP/1.1 %d OK\r\n"+
+		"Content-Type: %s\r\n"+
+		"Content-Length: %d\r\n"+
+		"Connection: close\r\n"+
+		"\r\n"+
+		"%s", statusCode, contentType, len(body), body)
 }
