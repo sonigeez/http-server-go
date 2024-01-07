@@ -40,19 +40,29 @@ func handleRequest(conn net.Conn) {
 
     requestLine := strings.Split(string(buf), "\r\n")[0]
     requestParts := strings.Split(requestLine, " ")
-    if len(requestParts) < 3 {
-        fmt.Println("Invalid request line")
-        return
-    }
 
-    method, path, _ := requestParts[0], requestParts[1], requestParts[2]
-    if method == "GET" && path == "/" {
-        response := "HTTP/1.1 200 OK\r\n\r\n"
-		fmt.Println("200")
-        conn.Write([]byte(response))
-    } else {
-		fmt.Println("404")
-        response := "HTTP/1.1 404 Not Found\r\n\r\n"
-        conn.Write([]byte(response))
-    }
+    _, path, _ := requestParts[0], requestParts[1], requestParts[2]
+	isEcho := strings.HasPrefix(path, "/echo/")
+	isRoot := path == "/"
+	if isEcho {
+		message := strings.TrimPrefix(path, "/echo/")
+		response := fmt.Sprintf("HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\nContent-Length: %d\r\n\r\n%s", len(message), message)
+		_, writeErr := conn.Write([]byte(response))
+		if writeErr != nil {
+			fmt.Println("Error writing:", writeErr.Error())
+		}
+	} else if isRoot {
+		response := "HTTP/1.1 200 OK\r\n\r\n"
+		_, writeErr := conn.Write([]byte(response))
+		if writeErr != nil {
+			fmt.Println("Error writing:", writeErr.Error())
+		}
+	}else{
+		response := "HTTP/1.1 404 Not Found\r\n\r\n"
+		_, writeErr := conn.Write([]byte(response))
+		if writeErr != nil {
+			fmt.Println("Error writing:", writeErr.Error())
+		}
+	}
 }
+
